@@ -1,0 +1,46 @@
+name: Node.js Test and Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main  # This workflow runs on pushes to the 'main' branch.
+jobs:
+  test_and_deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20' # Specify your Node.js version here
+
+    - name: Install dependencies
+      run: npm install
+
+
+    - name: Deploy to VPS via SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+      # Your VPS host address. This should be stored as a GitHub Secret.
+        host: ${{ secrets.VPS_HOST }} 
+      # Your SSH username.
+        username: ${{ secrets.VPS_USERNAME }}
+
+        password: ${{ secrets.SSH_PASSPHRASE }}
+
+        port: ${{ secrets.SSH_PORT }}
+      # The SSH private key for authentication. This should also be a Secret.
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+        script: |
+          bash -l -c "
+          cd ~/FutureTech-Admin-Dashboard/
+          git pull origin main
+          source ~/.nvm/nvm.sh && nvm use 20.19.3 && npm install && npm run build && pm2 start ./build/server/index.js --name "futuretech-dashboard" -- listen 3001 
+          "
+
+
+        

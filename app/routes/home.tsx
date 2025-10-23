@@ -1,5 +1,6 @@
+import { useEffect } from "react";
 import type { Route } from "./+types/home";
-
+import { useNavigate } from "react-router";
 export function meta({}: Route.MetaArgs) {
   return [
     { title: "Future Tech Addis Dashboard" },
@@ -8,5 +9,9 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Home() {
+  const navigate = useNavigate();
+  useEffect(()=>{
+    navigate('/dashboard/home')
+  },[])
   return <></>;
 }

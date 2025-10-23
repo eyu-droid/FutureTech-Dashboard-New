@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -9,22 +9,30 @@ import { useMutation } from "@tanstack/react-query";
 import axiosInstance from "@/lib/axiosinstance";
 import { useAuth } from "./authprovider";
 import Loading from "./loading";
+import { AxiosError } from "axios";
+import { toastError } from "@/lib/toast";
 const LoginForm = () =>{
-    const  auth = useAuth();
     const {register, handleSubmit, formState:{errors}} = useForm<LoginFormData>({
         resolver: zodResolver(LoginValidationSchema),
-    })
+    });
+    const navigate = useNavigate();
     const {mutate, isPending} = useMutation({
         mutationFn: async (data:LoginFormData)=>{
             const response = await axiosInstance.post('/auth/login', data);
-            if(auth){
-                auth.setToken(response.data.accessToken);
-            }
+            return response.data;
             
+        },
+        onSuccess:()=>{
+            navigate('/dashboard/home')
+        },
+        onError:(error)=>{
+            if(error instanceof AxiosError){
+                toastError(error.response?.data.message);
+            }
         }
     })
     const onSubmit:SubmitHandler<LoginFormData> = (data)=>{
-        console.log(data);
+        mutate(data)
     }
     return(
         <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
