@@ -38,6 +38,7 @@ jobs:
         script: |
           bash -l -c "
           cd ~/FutureTech-Admin-Dashboard/
+          git stash
           git pull origin main
           source ~/.nvm/nvm.sh && nvm use 20.19.3 && npm install && npm run build && pm2 restart "futuretech-dashboard"
           "
