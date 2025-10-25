@@ -11,7 +11,7 @@ export function meta({}: Route.MetaArgs) {
 export default function Home() {
   const navigate = useNavigate();
   useEffect(()=>{
-    navigate('/dashboard/home')
+    navigate('/login')
   },[])
   return <></>;
 }

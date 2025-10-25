@@ -15,6 +15,7 @@ import Loading from "@/components/loading";
 import { Check, Ticket } from "lucide-react";
 import Fallback from "@/components/fallback";
 import { useState } from "react";
+import ReCAPTCHA from "react-google-recaptcha";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -39,9 +40,7 @@ export async function clientLoader({request}:ClientLoaderFunctionArgs){
 
 }
 
-export function HydrateFallback(){
-    return <Fallback/>
-}
+
 
 
 
@@ -101,7 +100,9 @@ const CheckOut = ({loaderData}: Route.ComponentProps)=>{
                         {errors.phone && <span className="text-red-500 text-sm font-semibold">{errors.phone?.message}</span>}
                     </div>
                     <div className="space-y-2">
-
+                        <ReCAPTCHA sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY} onChange={(value)=>{
+                            console.log("Captcha value:", value);
+                        }}/>
                     </div>
                 </div>
                 <Button className="w-full bg-purple-500 text-white font-medium" disabled={isPending}>

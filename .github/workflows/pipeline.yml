@@ -39,7 +39,7 @@ jobs:
           bash -l -c "
           cd ~/FutureTech-Admin-Dashboard/
           git pull origin main
-          source ~/.nvm/nvm.sh && nvm use 20.19.3 && npm install && npm run build && pm2 start server.js --name "futuretech-dashboard"
+          source ~/.nvm/nvm.sh && nvm use 20.19.3 && npm install && npm run build && pm2 restart "futuretech-dashboard"
           "
 
 
