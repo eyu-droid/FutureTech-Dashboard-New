@@ -14,7 +14,7 @@ const AttendeeTable:FC<{attendeeData: AttendeeResponse[], columns:ColumnDef<Atte
     return(
         <div>
             
-            {attendeeData && <DataTable columns={columns} data={attendeeData}/> }
+            {attendeeData && <DataTable columns={columns} data={attendeeData} showActions={true}/> }
             
         </div>
     )

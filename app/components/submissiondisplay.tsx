@@ -19,7 +19,7 @@ const SubmissionDetail:FC<SubmissionDetailProps> = ({isLoading, name, data, colu
                     isLoading && <Loading/>
                 }
                 {
-                    data && <DataTable data={data} columns={columns}/>
+                    data && <DataTable data={data} columns={columns} showActions={true}/>
                 }
             </div>
 

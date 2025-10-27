@@ -38,6 +38,14 @@ export const columns: ColumnDef<UserResponse>[] = [
     header: 'Is New',
   },
   {
+    accessorKey: 'Role',
+    header: 'Role',
+    cell: ({ row }) => {
+      const role = row.original.Role;
+      return <div>{role ? role.name : 'N/A'}</div>;
+    },
+  },
+  {
     accessorKey: 'createdAt',
     header: 'Created At',
   },

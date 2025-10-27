@@ -14,7 +14,7 @@ export const MobileSideMenu = ()=>{
         }
     };
 
-    
+
 
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);
@@ -24,7 +24,7 @@ export const MobileSideMenu = ()=>{
         <style>
                 {`
                 /* Target the main navigation scrollbar */
-                
+
                 /* Target the main content area scrollbar */
                 .main-content::-webkit-scrollbar {
                     width: 8px;
@@ -57,14 +57,14 @@ export const MobileSideMenu = ()=>{
                     {/* Logo */}
                     <div className="flex items-center space-x-2">
                         <img src="https://futuretechaddis.com/wp-content/uploads/2025/04/logo-future-.png" alt="Logo" className="object-contain w-28 h-28  rounded-lg" />
-                        
+
                     </div>
                 </div>
 {/* make scroll bar  */}
                 <nav className="flex-1 p-4 space-y-2 overflow-y-auto sidebar-nav">
                     {/* Navigation Links */}
                     <span className="text-xs font-semibold uppercase text-purple-200 px-4 py-2 mt-4 block">Overview</span>
-                    
+
                     <Link to="/dashboard/home" className="flex items-center px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-20 transition-colors duration-200">
                         <svg className="h-5 w-5 mr-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
                         <span>Dashboard</span>
@@ -108,7 +108,7 @@ export const MobileSideMenu = ()=>{
                         <svg className="h-5 w-5 mr-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                         <span>Messages {selectedUserEmails.length >0 && (<Badge variant='default'>{selectedUserEmails.length}</Badge>)}</span>
                     </Link>
-                   
+
                     <span className="text-xs font-semibold uppercase text-purple-200 px-4 py-2 mt-4 block">Event Manage</span>
                     <Link to="#" className="flex items-center px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-20 transition-colors duration-200">
                         <svg className="h-5 w-5 mr-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
@@ -128,7 +128,12 @@ export const MobileSideMenu = ()=>{
                           <Users className="w-4 h-4" />
                           <span>Users</span>
                     </Link>
-                    
+
+                    <Link to="/dashboard/roles" className="flex items-center gap-2">
+                          <Users className="w-4 h-4" />
+                          <span>Roles</span>
+                    </Link>
+
                 </nav>
             </aside>
             <button

@@ -14,7 +14,7 @@ const UsersTable: FC<UserTableProps> = ({ userData, columns }) => {
     return (
         <div>
 
-            {userData && <DataTable columns={columns} data={userData} />}
+            {userData && <DataTable columns={columns} data={userData} showActions={true} />}
 
         </div>
     )

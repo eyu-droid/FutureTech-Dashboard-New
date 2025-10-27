@@ -22,8 +22,9 @@ export default [
         route('/dashboard/partners', 'routes/partners/index.tsx'),
         route("/dashboard/attendees", "routes/attendees/index.tsx"),
         route('/dashboard/messages', 'routes/message/index.tsx'),
-        
-        route('/dashboard/users', "routes/users/index.tsx")
+
+        route('/dashboard/users', "routes/users/index.tsx"),
+        route('/dashboard/roles', "routes/roles/index.tsx")
     ]),
 
   layout("layouts/checkout.tsx", [

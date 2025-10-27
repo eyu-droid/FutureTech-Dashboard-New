@@ -7,13 +7,15 @@ import {
   EditUserValidationSchema,
   type EditUserFormData,
 } from '../types/user';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axiosInstance from '@/lib/axiosinstance';
 import { toastError, toastSuccess } from '@/lib/toast';
 import { AxiosError } from 'axios';
 import Loading from './loading';
 import { useAuth } from './authprovider';
 import type { UserResponse } from '@/types/user';
+import type { RoleResponse } from '@/types/role';
+import type { response } from '@/types/response';
 
 interface EditUserFormProps {
   user: UserResponse;
@@ -22,16 +24,30 @@ interface EditUserFormProps {
 const EditUserForm = ({ user }: EditUserFormProps) => {
   const auth = useAuth();
   const queryClient = useQueryClient();
+
+  const { data: roles } = useQuery<response<RoleResponse[]>>({
+    queryKey: ['roles'],
+    queryFn: async () => {
+      const res = await axiosInstance.get('/role/getAllRoles', {
+        headers: {
+          Authorization: `Bearer ${auth?.token}`,
+        },
+      });
+      return res.data;
+    },
+  });
+
   const { register, handleSubmit, formState: { errors } } = useForm<EditUserFormData>({
     resolver: zodResolver(EditUserValidationSchema),
     defaultValues: {
-      isLocked: user.isLocked,
+      isLocked: user.isLocked === 1,
+      roleId: user.Role?.id,
     },
   });
 
   const { mutate, isPending } = useMutation({
     mutationFn: async (data: EditUserFormData) => {
-      const response = await axiosInstance.patch(`/user/${user.id}`, data, {
+      const response = await axiosInstance.patch(`/user/update/${user.id}`, data, {
         headers: {
           Authorization: `Bearer ${auth?.token}`,
         },
@@ -50,7 +66,21 @@ const EditUserForm = ({ user }: EditUserFormProps) => {
   });
 
   const onSubmit: SubmitHandler<EditUserFormData> = (data) => {
-    mutate(data);
+    const payload: Partial<EditUserFormData> = {};
+    if (data.isLocked !== (user.isLocked === 1)) {
+      payload.isLocked = data.isLocked ? 1 : 0;
+    }
+    
+    if (data.roleId !== user.Role?.id) {
+      payload.roleId = data.roleId;
+    }
+
+    if (Object.keys(payload).length === 0) {
+      toastSuccess('No changes to save');
+      return;
+    }
+
+    mutate(payload as EditUserFormData);
   };
 
   return (
@@ -64,6 +94,22 @@ const EditUserForm = ({ user }: EditUserFormProps) => {
         <Label htmlFor="isLocked" className="text-sm text-purple-900">
           Is Locked
         </Label>
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="roleId" className="text-sm text-purple-900">
+          Role
+        </Label>
+        <select
+          {...register('roleId')}
+          className="w-full p-2 border rounded-md"
+        >
+          <option value="">None</option>
+          {roles?.data?.map((role) => (
+            <option key={role.id} value={role.id}>
+              {role.name}
+            </option>
+          ))}
+        </select>
       </div>
       <Button
         type="submit"

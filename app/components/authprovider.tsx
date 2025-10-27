@@ -50,7 +50,7 @@ export default function AuthProvider({children}: {children: React.ReactNode}){
             {isLoading && <div className="flex justify-center items-center absolute w-full h-full">
                 <Loading/>
                 </div>}
-            {!isLoading && <>
+            {!isLoading && token && <>
                 {children}
             </>}
             

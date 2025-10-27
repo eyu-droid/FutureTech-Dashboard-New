@@ -7,15 +7,29 @@ import {
   CreateUserValidationSchema,
   type CreateUserFormData,
 } from '../types/user';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import axiosInstance from '@/lib/axiosinstance';
 import { toastError, toastSuccess } from '@/lib/toast';
 import { AxiosError } from 'axios';
 import Loading from './loading';
 import { useAuth } from './authprovider';
+import type { RoleResponse } from '@/types/role';
+import type { response } from '@/types/response';
 
 const CreateUserForm = () => {
   const auth = useAuth();
+  const { data: roles } = useQuery<response<RoleResponse[]>>({
+    queryKey: ['roles'],
+    queryFn: async () => {
+      const res = await axiosInstance.get('/role/getAllRoles', {
+        headers: {
+          Authorization: `Bearer ${auth?.token}`,
+        },
+      });
+      return res.data;
+    },
+  });
+
   const { register, handleSubmit, formState: { errors } } = useForm<CreateUserFormData>({
     resolver: zodResolver(CreateUserValidationSchema),
   });
@@ -40,8 +54,7 @@ const CreateUserForm = () => {
   });
 
   const onSubmit: SubmitHandler<CreateUserFormData> = (data) => {
-    const { role, ...rest } = data;
-    mutate(rest);
+    mutate(data);
   };
 
   return (
@@ -78,16 +91,20 @@ const CreateUserForm = () => {
       </div>
 
       <div className="space-y-1">
-        <Label htmlFor="role" className="text-sm text-purple-900">
+        <Label htmlFor="roleId" className="text-sm text-purple-900">
           Role
         </Label>
-        <select {...register('role')} className="w-full p-2 border rounded-md">
-          <option value="Admin">Admin</option>
-          <option value="User">User</option>
+        <select {...register('roleId')} className="w-full p-2 border rounded-md">
+          <option value="">None</option>
+          {roles?.data?.map((role) => (
+            <option key={role.id} value={role.id}>
+              {role.name}
+            </option>
+          ))}
         </select>
-        {errors.role && (
+        {errors.roleId && (
           <span className="text-red-500 text-sm font-medium">
-            {errors.role.message}
+            {errors.roleId.message}
           </span>
         )}
       </div>

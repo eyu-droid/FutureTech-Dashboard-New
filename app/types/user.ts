@@ -6,8 +6,12 @@ export interface UserResponse {
   password: string;
   createdAt: string;
   updatedAt: string;
-  isLocked: boolean;
+  isLocked: number;
   isNew: boolean;
+  Role: {
+    id: number;
+    name: string;
+  } | null;
 }
 
 export const CreateUserValidationSchema = z.object({
@@ -16,13 +20,28 @@ export const CreateUserValidationSchema = z.object({
     message: 'Password must be at least 8 characters long',
   }),
   isLocked: z.boolean(),
-  role: z.enum(['Admin', 'User']),
+  roleId: z.preprocess(
+    (val) => {
+        if (typeof val === 'string' && val.trim() === '') return null;
+        const num = Number(val);
+        return isNaN(num) ? val : num;
+    },
+    z.number().nullable()
+  ),
 });
 
 export type CreateUserFormData = z.infer<typeof CreateUserValidationSchema>;
 
 export const EditUserValidationSchema = z.object({
   isLocked: z.boolean(),
+  roleId: z.preprocess(
+    (val) => {
+        if (typeof val === 'string' && val.trim() === '') return null;
+        const num = Number(val);
+        return isNaN(num) ? val : num;
+    },
+    z.number().nullable()
+  ),
 });
 
 export type EditUserFormData = z.infer<typeof EditUserValidationSchema>;

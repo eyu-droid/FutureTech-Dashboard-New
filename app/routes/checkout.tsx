@@ -1,4 +1,4 @@
-import { useAsyncError, useNavigate, type ClientLoaderFunctionArgs } from "react-router";
+import { useNavigate, type ClientLoaderFunctionArgs } from "react-router";
 import type { Route } from "../+types/root";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import { AxiosError } from "axios";
 import Loading from "@/components/loading";
 import { Check, Ticket } from "lucide-react";
 import Fallback from "@/components/fallback";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import ReCAPTCHA from "react-google-recaptcha";
 
 export function meta({}: Route.MetaArgs) {
@@ -46,6 +46,7 @@ export async function clientLoader({request}:ClientLoaderFunctionArgs){
 
 const CheckOut = ({loaderData}: Route.ComponentProps)=>{
     const navigate = useNavigate();
+    const reCaptchRef = useRef<ReCAPTCHA | null>(null);
     const {mutate, isPending} = useMutation({
         mutationFn: async(data:AttendeeValidationType)=>{
             const res = await axiosInstance.post<response<any>>('/attendee/checkout', data);
@@ -66,7 +67,7 @@ const CheckOut = ({loaderData}: Route.ComponentProps)=>{
     const [fullName, setFullName] = useState("Full name");
     const [email, setEmail] = useState("youremail@domain.com");
     const [phone, setPhone] = useState("000 000 000")
-    const {register, handleSubmit, formState:{errors}} = useForm<AttendeeValidationType>({
+    const {register, handleSubmit, formState:{errors}, getValues, setError, setValue} = useForm<AttendeeValidationType>({
         resolver: zodResolver(AttendeeValidationSchema),
         defaultValues:{
             email: loaderData.email,
@@ -77,10 +78,14 @@ const CheckOut = ({loaderData}: Route.ComponentProps)=>{
         
     });
     const submit:SubmitHandler<AttendeeValidationType> = (data)=>{
+        if(getValues('recaptchaToken') === undefined){
+            setError('recaptchaToken', {message: 'Please complete the reCAPTCHA'});
+            return;
+        }
         mutate(data)
     }
     return(
-        <div>
+        <div className="overflow-auto">
            
             <form className="space-y-4 md:w-[60%] mx-auto" onSubmit={handleSubmit(submit)}>
                 <div className="grid md:grid-cols-2 grid-cols-1 gap-2">
@@ -100,9 +105,10 @@ const CheckOut = ({loaderData}: Route.ComponentProps)=>{
                         {errors.phone && <span className="text-red-500 text-sm font-semibold">{errors.phone?.message}</span>}
                     </div>
                     <div className="space-y-2">
-                        <ReCAPTCHA sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY} onChange={(value)=>{
-                            console.log("Captcha value:", value);
+                        <ReCAPTCHA   sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY} onChange={(value)=>{
+                            setValue('recaptchaToken', value || undefined);
                         }}/>
+                        {errors.recaptchaToken && <span className="text-red-500 text-sm font-semibold">{errors.recaptchaToken?.message}</span>}
                     </div>
                 </div>
                 <Button className="w-full bg-purple-500 text-white font-medium" disabled={isPending}>
@@ -111,7 +117,7 @@ const CheckOut = ({loaderData}: Route.ComponentProps)=>{
                     {isPending && <Loading/>}
                 </Button>
             </form>
-            <div className="max-w-fit mt-10 mx-auto  rounded-md border border-gray-400">
+            <div className="max-w-fit mt-10 mx-auto  rounded-md border border-gray-400 ">
                 <div className="w-full p-5 bg-purple-500 flex items-center gap-3">
                     <img src="https://futuretechaddis.com/wp-content/uploads/2025/04/logo-future-.png" className="w-16 h-16 object-contain"/>
                     <div className="flex flex-col ">
@@ -119,11 +125,11 @@ const CheckOut = ({loaderData}: Route.ComponentProps)=>{
                         <span className="text-white/80 text-sm font-semibold">November 28 - November 30, 2025</span>
                     </div>
                 </div>
-                <div className="flex flex-wrap p-3 gap-2">
+                <div className="flex flex-wrap items-center p-3 gap-2">
                 <div className="border border-gray-300">
-                    <img src="sample.png" className=""/>
+                    <img src="/images/sample.png" className=""/>
                 </div>
-                <div className="grid grid-cols-2 gap-2 items-center">
+                <div className="grid md:grid-cols-2 grid-cols-1 gap-2 items-center">
                     <div className="flex gap-2 items-center">
                         <span className="font-thin uppercase">Name:</span>
                         <span className="border-b border-dotted border-gray-300 font-normal">{fullName}</span>
