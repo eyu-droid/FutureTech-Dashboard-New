@@ -1,4 +1,4 @@
-import { useNavigate, type ClientLoaderFunctionArgs } from "react-router";
+import { useNavigate, type ClientLoaderFunctionArgs, redirect } from "react-router";
 import type { Route } from "../+types/root";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -54,8 +54,14 @@ const CheckOut = ({loaderData}: Route.ComponentProps)=>{
         },
         onSuccess: (data)=>{
             if(data.data){
-                toastSuccess('Order Created Successfull');
-                navigate('/checkout/completed')
+                toastSuccess('Order Created Successfull. Please check your email for the ticket.');
+                const timer = setTimeout(()=>{
+                    window.location.href = 'https://futuretechaddis.com'
+
+                }, 3000);
+                return ()=>{
+                    clearTimeout(timer);
+                }
             }
         },
         onError:(error)=>{
@@ -117,8 +123,8 @@ const CheckOut = ({loaderData}: Route.ComponentProps)=>{
                     {isPending && <Loading/>}
                 </Button>
             </form>
-            <div className="max-w-fit mt-10 mx-auto  rounded-md border border-gray-400 ">
-                <div className="w-full p-5 bg-purple-500 flex items-center gap-3">
+            <div className="max-w-fit mt-10 mx-auto  rounded-md  border-gray-400 md:block hidden">
+                <div className="w-full p-5 bg-purple-500 flex flex-wrap items-center  gap-3">
                     <img src="https://futuretechaddis.com/wp-content/uploads/2025/04/logo-future-.png" className="w-16 h-16 object-contain"/>
                     <div className="flex flex-col ">
                         <span className="text-white text-lg font-extrabold">Future Tech Addis Invitation Ticket</span>
