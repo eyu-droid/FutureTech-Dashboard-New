@@ -1,6 +1,7 @@
 import { useAuth } from "@/components/authprovider";
 import axiosInstance from "@/lib/axiosinstance";
-import { type response } from "@/types/response";
+import type { response } from "@/types/response";
+
 import { useQuery } from "@tanstack/react-query";
 import { create, createStore } from "zustand";
 import { combine } from "zustand/middleware";

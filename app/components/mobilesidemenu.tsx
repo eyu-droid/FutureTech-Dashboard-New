@@ -1,27 +1,44 @@
 import { cn } from "@/lib/utils";
-import { Menu, Users } from "lucide-react";
+import { Menu, MenuIcon, Users } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
 import { useSelectedEmailStore } from "store/selectedemailstore";
 import { Badge } from "./ui/badge";
+import { useUserStore } from "store/userstore";
+import { useQuery } from "@tanstack/react-query";
+import axiosInstance from "@/lib/axiosinstance";
+import { useAuth } from "./authprovider";
+import Loading from "./loading";
 
-export const MobileSideMenu = ()=>{
+export const MobileSideMenu = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const {selectedUserEmails} = useSelectedEmailStore()
-    const clickOutside = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (e.target === e.currentTarget) {
-            setIsSidebarOpen(false);
+    const { selectedUserEmails } = useSelectedEmailStore()
+    const { user } = useUserStore();
+    const auth = useAuth();
+
+    const {data, isLoading} = useQuery({
+        queryKey: ['user-menus', user?.role],
+        queryFn: async()=>{
+            //fetch menus by role
+            if(!user?.role){
+                return [];
+            }
+            const res = await axiosInstance.get('permission/getmenutreebyrole/'+user?.role,{
+                headers:{
+                    'Authorization': 'Bearer '+auth?.token
+                }
+            });
+            return res.data;
         }
-    };
-
-
+    })
+    console.log(data);
 
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);
     };
-    return(
+    return (
         <>
-        <style>
+            <style>
                 {`
                 /* Target the main navigation scrollbar */
 
@@ -45,10 +62,10 @@ export const MobileSideMenu = ()=>{
                 `}
             </style>
             <div
-                className={cn("fixed inset-0 bg-gray-900 bg-opacity-50 z-40 lg:hidden",{'hidden': !isSidebarOpen})}
+                className={cn("fixed inset-0 bg-gray-900 bg-opacity-50 z-40 lg:hidden", { 'hidden': !isSidebarOpen })}
                 onClick={toggleSidebar}
             >
-            <Menu className="w-10 h-10"/>
+                <Menu className="w-10 h-10" />
             </div>
             <aside
                 className={`fixed inset-y-0 left-0 w-72 bg-purple-600 text-white flex flex-col shadow-lg transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 z-50`}
@@ -60,10 +77,26 @@ export const MobileSideMenu = ()=>{
 
                     </div>
                 </div>
-{/* make scroll bar  */}
+                {/* make scroll bar  */}
                 <nav className="flex-1 p-4 space-y-2 overflow-y-auto sidebar-nav">
                     {/* Navigation Links */}
-                    <span className="text-xs font-semibold uppercase text-purple-200 px-4 py-2 mt-4 block">Overview</span>
+                    {isLoading && <Loading/>}
+                    { !isLoading && data.data?.map((menuItem: any)=>(
+                        <>
+                         {menuItem.children.length > 0 && (
+                            <>
+                                <span className="text-xs font-semibold uppercase text-purple-200 px-4 py-2 mt-4 block">{menuItem.menuName}</span>
+                                {menuItem.children.map((childItem:any)=>(
+                                    <Link to={childItem.route} className="flex items-center px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-20 transition-colors duration-200">
+                                        <svg className="h-5 w-5 mr-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+                                        <span>{childItem.menuName}</span>
+                                    </Link>
+                                ))}
+                            </>
+                         )}
+                        </>
+                    ))}
+                    {/* <span className="text-xs font-semibold uppercase text-purple-200 px-4 py-2 mt-4 block">Overview</span>
 
                     <Link to="/dashboard/home" className="flex items-center px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-20 transition-colors duration-200">
                         <svg className="h-5 w-5 mr-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
@@ -133,16 +166,16 @@ export const MobileSideMenu = ()=>{
                           <Users className="w-4 h-4" />
                           <span>Roles</span>
                     </Link>
-
+ */}
                 </nav>
             </aside>
             <button
-                    id="menu-button"
-                    className="lg:hidden fixed top-6 left-6 z-50 text-purple-600 focus:outline-none"
-                    onClick={toggleSidebar}
-                >
-                    <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-                </button>
-            </>
+                id="menu-button"
+                className="lg:hidden fixed top-6 left-6 z-50 text-purple-600 focus:outline-none"
+                onClick={toggleSidebar}
+            >
+                <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </button>
+        </>
     )
 }

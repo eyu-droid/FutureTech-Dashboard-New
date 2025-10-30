@@ -5,7 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router";
 
 
-export async function loader(){
+export async function clientLoader(){
     return {};
 }
 export default function ForgotPassword(){

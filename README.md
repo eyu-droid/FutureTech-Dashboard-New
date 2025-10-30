@@ -5,6 +5,12 @@ Dashboard for managing attendees in future tech
 
 ## Getting Started
 
+### Enviromental Variables
+```
+VITE_API_KEY="Your apikey to connect to the api"
+VITE_ENDPOINT="your backend url"
+```
+
 ### Installation
 
 Install the dependencies:
@@ -63,3 +69,5 @@ Make sure to deploy the output of `npm run build`
 This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
 
 ---
+
+
