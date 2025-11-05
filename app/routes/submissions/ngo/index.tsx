@@ -24,7 +24,7 @@ export function loader(){}
 const Index = ()=>{
     const auth = useAuth();
     const {data, isLoading} = useQuery({
-        queryKey:[],
+        queryKey:['submissions', 'ngo'],
         queryFn: async ()=>{
             const res = await axiosInstance.get<response<SubmissionResponse[]>>('/register/submission/ngo',{
                 headers: {

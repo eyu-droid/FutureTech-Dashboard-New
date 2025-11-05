@@ -10,7 +10,7 @@ import FollowUp from "../followup";
 import axiosInstance from "@/lib/axiosinstance";
 import type { response } from "@/types/response";
 import type { FollowUpListType } from "@/types/followup";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../authprovider";
 import { useEffect, useState } from "react";
 import { BaseColumns } from "./basecolumns";
@@ -19,6 +19,9 @@ import type { EmbassySubmission, SubmissionResponse } from "@/types/submission";
 import useFollowUpStore from "store/store";
 import MarkAsCompleted from "../markascomplete";
 import { DateRangeColumnFilter } from "../filterui/datefilter";
+import { DeleteConfirmationDialog } from "../DeleteConfirmationDialog";
+import { toast } from "sonner";
+import { AxiosError } from "axios";
 
 export const embassycolumns: ColumnDef<EmbassySubmission>[] = [
    ...(BaseColumns as ColumnDef<EmbassySubmission>[]),
@@ -69,6 +72,7 @@ export const embassycolumns: ColumnDef<EmbassySubmission>[] = [
             const [open, setOpen] = useState(false)
             const {initialFollowUp} = useFollowUpStore();
             const auth = useAuth()
+            const queryClient = useQueryClient();
             const entryId = row.getValue('entry_id') as number;
             const { data, isLoading, refetch } = useQuery({
                 queryKey: ['followup', row.getValue('entry_id')],
@@ -87,6 +91,30 @@ export const embassycolumns: ColumnDef<EmbassySubmission>[] = [
                 retry: 3
 
             });
+
+            const { mutate } = useMutation({
+                mutationFn: async () => {
+                    const response = await axiosInstance.delete(`/register/submission/embassy/${row.getValue('entry_id')}`, {
+                        headers: {
+                            Authorization: `Bearer ${auth?.token}`
+                        }
+                    });
+                    return response.data;
+                },
+                onSuccess: () => {
+                    toast.success('Submission deleted successfully');
+                    queryClient.invalidateQueries({ queryKey: ['submissions'] });
+                },
+                onError: (error) => {
+                    if (error instanceof AxiosError) {
+                        toast.error(error.response?.data.message);
+                    }
+                }
+            });
+
+            const handleDelete = () => {
+                mutate();
+            }
           
             
             return (
@@ -100,8 +128,8 @@ export const embassycolumns: ColumnDef<EmbassySubmission>[] = [
                                 </div>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent>
-                                <DropdownMenuItem>
-                                    <DialogTrigger>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                    <DialogTrigger asChild>
                                         <Button variant='ghost'>
                                             <Plus className="w-5 h-5" />
                                             Followup
@@ -109,8 +137,8 @@ export const embassycolumns: ColumnDef<EmbassySubmission>[] = [
                                         </Button>
                                     </DialogTrigger>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
-
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                    <DeleteConfirmationDialog onDelete={handleDelete} />
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>

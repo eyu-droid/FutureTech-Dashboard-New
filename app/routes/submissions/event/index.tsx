@@ -16,7 +16,7 @@ export function meta({ }: MetaArgs) {
 const Index = () => {
      const auth = useAuth();
     const { data, isLoading } = useQuery({
-        queryKey: ['eventAttendee'],
+        queryKey: ['submissions', 'event'],
         queryFn: async () => {
             const res = await axiosInstance.get<response<EventAttendeeSubmission[]>>('/register/submission/event', {
                 headers: {

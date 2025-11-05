@@ -6,7 +6,7 @@ import SubmissionDetail from "@/components/submissiondetails/submissionDetails"
 import { useState } from "react"
 import useFollowUpStore from "store/store"
 import { useAuth } from "../authprovider"
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type { response } from "@/types/response"
 import type { FollowUpListType } from "@/types/followup"
 import axiosInstance from "@/lib/axiosinstance"
@@ -17,7 +17,11 @@ import { Badge } from "../ui/badge"
 import FollowUp from "../followup"
 import MarkAsCompleted from "../markascomplete"
 import { DateRangeColumnFilter } from "../filterui/datefilter"
-import { BaseColumns } from "./basecolumns"
+import { BaseColumns } from "./basecolumns";
+import { DeleteConfirmationDialog } from "../DeleteConfirmationDialog";
+import { toast } from "sonner";
+import { AxiosError } from "axios"
+
 export const localcompanycolumns: ColumnDef<LocalCompanySubmission>[] = [
     ...(BaseColumns as ColumnDef<LocalCompanySubmission>[]),
     {
@@ -67,6 +71,7 @@ export const localcompanycolumns: ColumnDef<LocalCompanySubmission>[] = [
             const {initialFollowUp} = useFollowUpStore();
             const entryId = row.getValue('entry_id') as number;
             const auth = useAuth()
+            const queryClient = useQueryClient();
             const { data, isLoading, refetch } = useQuery({
                 queryKey: ['followup', row.getValue('entry_id')],
                 queryFn: async () => {
@@ -84,6 +89,30 @@ export const localcompanycolumns: ColumnDef<LocalCompanySubmission>[] = [
                 retry: 3
 
             });
+
+            const { mutate } = useMutation({
+                mutationFn: async () => {
+                    const response = await axiosInstance.delete(`/register/submission/localcompany/${row.getValue('entry_id')}`, {
+                        headers: {
+                            Authorization: `Bearer ${auth?.token}`
+                        }
+                    });
+                    return response.data;
+                },
+                onSuccess: () => {
+                    toast.success('Submission deleted successfully');
+                    queryClient.invalidateQueries({ queryKey: ['submissions'] });
+                },
+                onError: (error) => {
+                    if (error instanceof AxiosError) {
+                        toast.error(error.response?.data.message);
+                    }
+                }
+            });
+
+            const handleDelete = () => {
+                mutate();
+            }
           
             
             return (
@@ -97,8 +126,8 @@ export const localcompanycolumns: ColumnDef<LocalCompanySubmission>[] = [
                                 </div>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent>
-                                <DropdownMenuItem>
-                                    <DialogTrigger>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                    <DialogTrigger asChild>
                                         <Button variant='ghost'>
                                             <Plus className="w-5 h-5" />
                                             Followup
@@ -106,8 +135,8 @@ export const localcompanycolumns: ColumnDef<LocalCompanySubmission>[] = [
                                         </Button>
                                     </DialogTrigger>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
-
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                    <DeleteConfirmationDialog onDelete={handleDelete} />
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
