@@ -12,6 +12,7 @@ import { DeleteConfirmationDialog } from "../DeleteConfirmationDialog";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
+import { useUserStore } from "store/userstore";
 
 export const EventAttendeeColumns: ColumnDef<EventAttendeeSubmission>[] = [
     ...(BaseColumns as ColumnDef<EventAttendeeSubmission>[]),
@@ -63,6 +64,7 @@ export const EventAttendeeColumns: ColumnDef<EventAttendeeSubmission>[] = [
         header: 'Actions ',
         cell: ({ row }) => {
             const auth = useAuth()
+            const {user} = useUserStore();
             const queryClient = useQueryClient();
             const { mutate } = useMutation({
                 mutationFn: async () => {
@@ -96,9 +98,9 @@ export const EventAttendeeColumns: ColumnDef<EventAttendeeSubmission>[] = [
                             <MoreVertical />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
-                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                            {user.role === 3 && <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                                 <DeleteConfirmationDialog onDelete={handleDelete} />
-                            </DropdownMenuItem>
+                            </DropdownMenuItem>}
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </>

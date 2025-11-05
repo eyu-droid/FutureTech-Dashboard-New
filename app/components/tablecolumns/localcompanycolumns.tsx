@@ -21,6 +21,7 @@ import { BaseColumns } from "./basecolumns";
 import { DeleteConfirmationDialog } from "../DeleteConfirmationDialog";
 import { toast } from "sonner";
 import { AxiosError } from "axios"
+import { useUserStore } from "store/userstore";
 
 export const localcompanycolumns: ColumnDef<LocalCompanySubmission>[] = [
     ...(BaseColumns as ColumnDef<LocalCompanySubmission>[]),
@@ -71,6 +72,7 @@ export const localcompanycolumns: ColumnDef<LocalCompanySubmission>[] = [
             const {initialFollowUp} = useFollowUpStore();
             const entryId = row.getValue('entry_id') as number;
             const auth = useAuth()
+            const {user} = useUserStore();
             const queryClient = useQueryClient();
             const { data, isLoading, refetch } = useQuery({
                 queryKey: ['followup', row.getValue('entry_id')],
@@ -135,9 +137,9 @@ export const localcompanycolumns: ColumnDef<LocalCompanySubmission>[] = [
                                         </Button>
                                     </DialogTrigger>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                {user.role === 3 && <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                                     <DeleteConfirmationDialog onDelete={handleDelete} />
-                                </DropdownMenuItem>
+                                </DropdownMenuItem>}
                             </DropdownMenuContent>
                         </DropdownMenu>
 

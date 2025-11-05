@@ -22,6 +22,7 @@ import { BaseColumns } from "./basecolumns";
 import { DeleteConfirmationDialog } from "../DeleteConfirmationDialog";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
+import { useUserStore } from "store/userstore";
 
 export const columns: ColumnDef<SubmissionResponse>[] = [
     ...(BaseColumns as ColumnDef<SubmissionResponse>[]),
@@ -71,6 +72,7 @@ export const columns: ColumnDef<SubmissionResponse>[] = [
             const [open, setOpen] = useState(false)
             const {initialFollowUp} = useFollowUpStore();
             const auth = useAuth()
+            const {user} = useUserStore();
             const queryClient = useQueryClient();
             const entryId = row.getValue('entry_id') as number;
             const { data, isLoading, refetch } = useQuery({
@@ -135,9 +137,9 @@ export const columns: ColumnDef<SubmissionResponse>[] = [
                                         </Button>
                                     </DialogTrigger>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                {user.role === 3 && <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                                     <DeleteConfirmationDialog onDelete={handleDelete} />
-                                </DropdownMenuItem>
+                                </DropdownMenuItem>}
                             </DropdownMenuContent>
                         </DropdownMenu>
 

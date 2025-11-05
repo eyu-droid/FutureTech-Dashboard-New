@@ -22,6 +22,7 @@ import { DateRangeColumnFilter } from "../filterui/datefilter";
 import { DeleteConfirmationDialog } from "../DeleteConfirmationDialog";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
+import { useUserStore } from "store/userstore";
 
 export const embassycolumns: ColumnDef<EmbassySubmission>[] = [
    ...(BaseColumns as ColumnDef<EmbassySubmission>[]),
@@ -72,6 +73,7 @@ export const embassycolumns: ColumnDef<EmbassySubmission>[] = [
             const [open, setOpen] = useState(false)
             const {initialFollowUp} = useFollowUpStore();
             const auth = useAuth()
+            const {user} = useUserStore();
             const queryClient = useQueryClient();
             const entryId = row.getValue('entry_id') as number;
             const { data, isLoading, refetch } = useQuery({
@@ -137,9 +139,9 @@ export const embassycolumns: ColumnDef<EmbassySubmission>[] = [
                                         </Button>
                                     </DialogTrigger>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                {user.role === 3 && <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                                     <DeleteConfirmationDialog onDelete={handleDelete} />
-                                </DropdownMenuItem>
+                                </DropdownMenuItem>}
                             </DropdownMenuContent>
                         </DropdownMenu>
 

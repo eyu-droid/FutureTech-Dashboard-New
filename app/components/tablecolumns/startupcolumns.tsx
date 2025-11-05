@@ -4,7 +4,8 @@ import { Button } from "../ui/button"
 import { ArrowUpDown, MoreVertical, Plus } from "lucide-react"
 import SubmissionDetail from "@/components/submissiondetails/submissionDetails"
 import { useState } from "react"
-import useFollowUpStore from "store/store"
+import useFollowUpStore from "store/store";
+import { useUserStore } from "store/userstore";
 import { useAuth } from "../authprovider"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type { response } from "@/types/response"
@@ -109,6 +110,7 @@ export const startupcolumns: ColumnDef<StartupSubmissions>[] = [
             const [open, setOpen] = useState(false)
             const {initialFollowUp} = useFollowUpStore();
             const auth = useAuth()
+            const {user} = useUserStore();
             const queryClient = useQueryClient();
             const entryId = row.getValue('entry_id') as number;
             const { data, isLoading, refetch } = useQuery({
@@ -174,9 +176,9 @@ export const startupcolumns: ColumnDef<StartupSubmissions>[] = [
                                         </Button>
                                     </DialogTrigger>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                               {user.role === 3 && <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                                     <DeleteConfirmationDialog onDelete={handleDelete} />
-                                </DropdownMenuItem>
+                                </DropdownMenuItem>}
                             </DropdownMenuContent>
                         </DropdownMenu>
 
