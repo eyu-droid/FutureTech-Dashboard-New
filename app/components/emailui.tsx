@@ -12,11 +12,16 @@ import { useForm, type SubmitHandler } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { EmailSchema, type EmailType } from "@/types/email"
 import { useSelectedEmailStore } from "store/selectedemailstore"
+import { useState } from "react"
+import { toastSuccess, toastError } from "@/lib/toast"
+import { AxiosError } from "axios"
+
 type EmailUIProps = {
     recepiantInfo: any[]
 }
 export const EmailUI:FC<EmailUIProps> = ({recepiantInfo}) => {
     const auth = useAuth();
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
     const {addSelectedUserEmail} = useSelectedEmailStore();
     const {register, handleSubmit, formState:{errors}} = useForm({
         resolver: zodResolver(EmailSchema)
@@ -29,6 +34,18 @@ export const EmailUI:FC<EmailUIProps> = ({recepiantInfo}) => {
                 }
             });
             return res.data;
+        },
+        onSuccess: ()=>{
+            toastSuccess("Email sent successfully");
+            setIsDialogOpen(false);
+        },
+        onError: (error: any)=>{
+            if (error instanceof AxiosError) {
+                toastError(error.response?.data.message);
+            } else {
+                toastError("Email failed to send");
+            }
+            setIsDialogOpen(false);
         }
     });
     const onSendEmail:SubmitHandler<EmailType> = (data)=>{
@@ -42,7 +59,7 @@ export const EmailUI:FC<EmailUIProps> = ({recepiantInfo}) => {
         mutate(sendingInfo);
     }
     return (
-        <Dialog>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild disabled={recepiantInfo?.length===0}>
                 <Button>
                     Send Email ({recepiantInfo?recepiantInfo.length:0})
