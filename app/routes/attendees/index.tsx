@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/authprovider";
 import axiosInstance from "@/lib/axiosinstance";
-import { toastError } from "@/lib/toast";
+import { toastError, toastSuccess } from "@/lib/toast";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -18,6 +19,7 @@ import type { response } from "@/types/response";
 import { useDebounce } from "@/hooks/debounce";
 import { AxiosError } from "axios";
 import type { Route } from "./+types";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -28,7 +30,9 @@ export function meta({}: Route.MetaArgs) {
 
 export default function AttendeesPage() {
   const auth = useAuth();
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState<string>("");
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const debounceSearchTerm = useDebounce(filter, 500);
 
   const { data, isLoading, isError } = useQuery({
@@ -55,6 +59,58 @@ export default function AttendeesPage() {
     },
   });
 
+  const sendQRCodeMutation = useMutation({
+    mutationFn: async (attendees: AttendeeResponse[]) => {
+      try {
+        const res = await axiosInstance.post(
+          "/mail/send-qrcode",
+          { attendees },
+          {
+            headers: {
+              Authorization: `Bearer ${auth?.token}`,
+            },
+          },
+        );
+        return res.data;
+      } catch (error) {
+        if (error instanceof AxiosError) {
+          toastError(
+            error.response?.data.message || "Failed to send QR codes",
+          );
+        }
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      toastSuccess("QR codes sent successfully");
+      setSelectedRows([]);
+      queryClient.invalidateQueries({ queryKey: ["attendees"] });
+    },
+  });
+
+  const handleSelectRow = (id: string) => {
+    setSelectedRows((prev) =>
+      prev.includes(id) ? prev.filter((rowId) => rowId !== id) : [...prev, id],
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedRows.length === data?.data?.length) {
+      setSelectedRows([]);
+    } else {
+      setSelectedRows(data?.data?.map((attendee) => attendee.id) || []);
+    }
+  };
+
+  const handleSendQRCode = () => {
+    const selectedAttendees = data?.data?.filter((attendee) =>
+      selectedRows.includes(attendee.id),
+    );
+    if (selectedAttendees) {
+      sendQRCodeMutation.mutate(selectedAttendees);
+    }
+  };
+
   return (
     <div className="space-y-3">
       <h3 className="font-semibold text-2xl">Attendees</h3>
@@ -63,6 +119,12 @@ export default function AttendeesPage() {
           placeholder="Search by email, name..."
           onChange={(e) => setFilter(e.target.value)}
         />
+        <Button
+          onClick={handleSendQRCode}
+          disabled={selectedRows.length === 0 || sendQRCodeMutation.isPending}
+        >
+          {sendQRCodeMutation.isPending ? "Sending..." : "Send QRCode"}
+        </Button>
       </div>
       {isLoading && <Loading />}
       {isError && (
@@ -73,6 +135,12 @@ export default function AttendeesPage() {
         <Table className="border rounded-lg shadow-sm">
           <TableHeader>
             <TableRow>
+              <TableHead>
+                <Checkbox
+                  checked={selectedRows.length === data.data.length}
+                  onCheckedChange={handleSelectAll}
+                />
+              </TableHead>
               <TableHead>ID</TableHead>
               <TableHead>Full Name</TableHead>
               <TableHead>Email</TableHead>
@@ -85,6 +153,12 @@ export default function AttendeesPage() {
           <TableBody>
             {data.data.map((attendee) => (
               <TableRow key={attendee.id}>
+                <TableCell>
+                  <Checkbox
+                    checked={selectedRows.includes(attendee.id)}
+                    onCheckedChange={() => handleSelectRow(attendee.id)}
+                  />
+                </TableCell>
                 <TableCell>{attendee.id}</TableCell>
                 <TableCell>{attendee.fullname}</TableCell>
                 <TableCell>{attendee.email}</TableCell>
