@@ -86,4 +86,5 @@ export default [
     route("checkout", "routes/checkout.tsx"),
     route("checkout/completed", "routes/completed.tsx"),
   ]),
+  route("/print-qr/:orderNo", "routes/print-qr.$orderNo.tsx"),
 ] satisfies RouteConfig;
