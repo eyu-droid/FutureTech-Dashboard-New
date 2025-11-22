@@ -64,6 +64,12 @@ const DashboardSideBar = () => {
                           Attendees
                       </Link>
                   </li>
+                  <li className="text-white text-sm">
+                      <Link to="/dashboard/attendees/confirmed" className="flex items-center gap-2">
+                          <User className="w-4 h-4" />
+                          Confirmed
+                      </Link>
+                  </li>
                   <li className=" text-white text-sm">
                       <Link to='/dashboard/checkin' className="flex items-center gap-2">
                           <Check className="w-4 h-4" />

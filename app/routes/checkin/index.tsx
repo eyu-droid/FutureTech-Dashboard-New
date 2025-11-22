@@ -3,6 +3,7 @@ import Fallback from "@/components/fallback";
 import HtmlQRCode from "@/components/htmlqrcode";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import axiosInstance from "@/lib/axiosinstance";
 import { toastError, toastSuccess } from "@/lib/toast";
 import type { AttendeeResponse } from "@/types/attendee";
@@ -48,6 +49,11 @@ const Index = ()=>{
         
     })
    
+    // state to hold check-in result and UI flags
+    const [checkedInData, setCheckedInData] = useState<any | null>(null);
+    const [isCheckinModalOpen, setIsCheckinModalOpen] = useState(false);
+    const [showDetails, setShowDetails] = useState(false);
+
     const {mutate, isPending} = useMutation({
         mutationFn: async(orderCode:string)=>{
             const res = await axiosInstance.post<response<any>>('/attendee/checkin', {orderNo:orderCode},{
@@ -58,7 +64,28 @@ const Index = ()=>{
             return res.data;
         },
         onSuccess: (data)=>{
-            toastSuccess(data.message)
+            // Show a single, appropriate toast and avoid duplicate toasts for the 'already' case.
+            // Use a less-intrusive info toast for 'Already checked in' and the regular success toast for first-time check-in.
+            if (data && data.message) {
+                if (data.message === 'Already checked in') {
+                    // less prominent message when someone was already checked
+                    toast.info(data.message);
+                } else {
+                    toastSuccess(data.message);
+                }
+            }
+            // If backend returned order and attendee, show modal with details and refresh the attendees list
+            if(data && data.data){
+                setCheckedInData(data.data);
+                setShowDetails(false);
+                setIsCheckinModalOpen(true);
+                // refetch the attendees list so the table reflects the updated CHECKEDIN status
+                try {
+                    refetch();
+                } catch (err) {
+                    // ignore refetch errors here; table will refresh on user action
+                }
+            }
         },
         onError: (error)=>{
             if(error instanceof AxiosError){
@@ -92,6 +119,57 @@ const Index = ()=>{
                 {
                     data?.data && <AttendeeTable attendeeData={data?.data} columns={columns}/>
                 }
+
+                {/* Simple modal shown after a successful check-in (from QR scan or manual entry) */}
+                {isCheckinModalOpen && checkedInData && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center">
+                        <div className="relative z-50 max-w-md w-full mx-4">
+                            <div className="bg-white rounded-lg shadow-lg p-6">
+                                <div className="flex items-start justify-between">
+                                    <div>
+                                        <h3 className="text-lg font-semibold">Checked in</h3>
+                                        <p className="text-sm text-muted-foreground">Ticket verified successfully</p>
+                                    </div>
+                                    <button aria-label="Close" onClick={()=> setIsCheckinModalOpen(false)} className="text-gray-500 hover:text-gray-700">✕</button>
+                                </div>
+
+                                <div className="mt-4 space-y-2">
+                                    <div><strong>Name:</strong> {checkedInData.attendee?.fullname ?? 'N/A'}</div>
+                                    <div><strong>Email:</strong> {checkedInData.attendee?.email ?? 'N/A'}</div>
+                                    <div><strong>Phone:</strong> {checkedInData.attendee?.phone ?? 'N/A'}</div>
+                                    <div><strong>Ticket Type:</strong> {checkedInData.order?.ticket ?? 'N/A'}</div>
+                                    <div><strong>Registered:</strong> {checkedInData.attendee?.createdAt ? new Date(checkedInData.attendee.createdAt).toLocaleString() : 'N/A'}</div>
+                                </div>
+
+                                <div className="mt-4 flex gap-2">
+                                    <Button onClick={() => setShowDetails(v => !v)}>{showDetails ? 'Hide Details' : 'View Details'}</Button>
+                                    <Button variant="ghost" onClick={()=> setIsCheckinModalOpen(false)}>Close</Button>
+                                </div>
+
+                                {showDetails && (
+                                    <div className="mt-4 border-t pt-4 space-y-2 text-sm">
+                                        {/* Render extra fields if present in payload; fallback to N/A */}
+                                        {checkedInData.order?.ticket === 'Event' ? (
+                                            <>
+                                                <div><strong>Sector of Interest:</strong> {checkedInData.attendee?.sectorOfInterest ?? 'N/A'}</div>
+                                                <div><strong>Ticket Type:</strong> {checkedInData.order?.ticket ?? 'N/A'}</div>
+                                                <div><strong>Registered Date:</strong> {checkedInData.attendee?.createdAt ? new Date(checkedInData.attendee.createdAt).toLocaleString() : 'N/A'}</div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div><strong>Want Investment Opportunity:</strong> {checkedInData.attendee?.investmentOpportunity ?? 'N/A'}</div>
+                                                <div><strong>Profession:</strong> {checkedInData.attendee?.profession ?? 'N/A'}</div>
+                                                <div><strong>Sector of Interest:</strong> {checkedInData.attendee?.sectorOfInterest ?? 'N/A'}</div>
+                                                <div><strong>Attend Workshop:</strong> {checkedInData.attendee?.workshop ?? 'N/A'}</div>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div className="fixed inset-0 bg-black opacity-30" onClick={()=> setIsCheckinModalOpen(false)} />
+                    </div>
+                )}
             </div>
 
         </div>
