@@ -41,10 +41,16 @@ const Index = ()=>{
     const [filter, setFilter] = useState('');
     const debounceSearchTerm = useDebounce(filter, 500);
     const {data, isLoading, isError , refetch} = useQuery({
-        queryKey: ['attendees', debounceSearchTerm],
+        queryKey: ['checkinList', debounceSearchTerm],
         queryFn: async ()=>{
-            const res = await axiosInstance.get<response<AttendeeResponse[]>>('attendee/getAllAttendees?query='+ filter);
-            return res.data
+            // Fetch a page of attendees enriched with order/checkin info from the backend endpoint.
+            // The backend returns { items: [...], meta: { total, page, limit, pages } }
+            const res = await axiosInstance.get('/attendee/getCheckInList?page=1&limit=100&query=' + encodeURIComponent(filter), {
+                headers: {
+                    'Authorization': 'Bearer ' + auth?.token
+                }
+            });
+            return res.data;
         },
         
     })
@@ -79,12 +85,7 @@ const Index = ()=>{
                 setCheckedInData(data.data);
                 setShowDetails(false);
                 setIsCheckinModalOpen(true);
-                // refetch the attendees list so the table reflects the updated CHECKEDIN status
-                try {
-                    refetch();
-                } catch (err) {
-                    // ignore refetch errors here; table will refresh on user action
-                }
+                // We'll refresh the check-in list when the modal is closed so the user can review the details first
             }
         },
         onError: (error)=>{
@@ -117,7 +118,38 @@ const Index = ()=>{
                     isLoading && <Loading/>
                 }
                 {
-                    data?.data && <AttendeeTable attendeeData={data?.data} columns={columns}/>
+                    // Render the check-in list returned by the new API.
+                    // The API returns a payload with .data.items and pagination meta.
+                    data?.data?.items && data.data.items.length > 0 ? (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm table-auto border-collapse">
+                                <thead>
+                                    <tr className="text-left">
+                                        <th className="p-2">ID</th>
+                                        <th className="p-2">Full Name</th>
+                                        <th className="p-2">Email</th>
+                                        <th className="p-2">Phone</th>
+                                        <th className="p-2">Ticket</th>
+                                        <th className="p-2">Checked In</th>
+                                        <th className="p-2">Checked Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {data.data.items.map((item:any) => (
+                                        <tr key={item.id} className="border-t">
+                                            <td className="p-2 align-top">{item.id}</td>
+                                            <td className="p-2 align-top">{item.fullname}</td>
+                                            <td className="p-2 align-top">{item.email}</td>
+                                            <td className="p-2 align-top">{item.phone ?? 'N/A'}</td>
+                                            <td className="p-2 align-top">{item.order?.ticket ?? 'N/A'}</td>
+                                            <td className="p-2 align-top">{item.checkedIn ? 'Yes' : 'No'}</td>
+                                            <td className="p-2 align-top">{item.checkedTime ? new Date(item.checkedTime).toLocaleString() : 'N/A'}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : null
                 }
 
                 {/* Simple modal shown after a successful check-in (from QR scan or manual entry) */}
@@ -130,7 +162,10 @@ const Index = ()=>{
                                         <h3 className="text-lg font-semibold">Checked in</h3>
                                         <p className="text-sm text-muted-foreground">Ticket verified successfully</p>
                                     </div>
-                                    <button aria-label="Close" onClick={()=> setIsCheckinModalOpen(false)} className="text-gray-500 hover:text-gray-700">✕</button>
+                                    <button aria-label="Close" onClick={()=>{
+                                        setIsCheckinModalOpen(false);
+                                        try { refetch(); } catch (e) { /* ignore */ }
+                                    }} className="text-gray-500 hover:text-gray-700">✕</button>
                                 </div>
 
                                 <div className="mt-4 space-y-2">
@@ -143,31 +178,42 @@ const Index = ()=>{
 
                                 <div className="mt-4 flex gap-2">
                                     <Button onClick={() => setShowDetails(v => !v)}>{showDetails ? 'Hide Details' : 'View Details'}</Button>
-                                    <Button variant="ghost" onClick={()=> setIsCheckinModalOpen(false)}>Close</Button>
+                                    <Button variant="ghost" onClick={()=>{
+                                        setIsCheckinModalOpen(false);
+                                        try { refetch(); } catch (e) { /* ignore */ }
+                                    }}>Close</Button>
                                 </div>
 
                                 {showDetails && (
                                     <div className="mt-4 border-t pt-4 space-y-2 text-sm">
-                                        {/* Render extra fields if present in payload; fallback to N/A */}
-                                        {checkedInData.order?.ticket === 'Event' ? (
-                                            <>
-                                                <div><strong>Sector of Interest:</strong> {checkedInData.attendee?.sectorOfInterest ?? 'N/A'}</div>
-                                                <div><strong>Ticket Type:</strong> {checkedInData.order?.ticket ?? 'N/A'}</div>
-                                                <div><strong>Registered Date:</strong> {checkedInData.attendee?.createdAt ? new Date(checkedInData.attendee.createdAt).toLocaleString() : 'N/A'}</div>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <div><strong>Want Investment Opportunity:</strong> {checkedInData.attendee?.investmentOpportunity ?? 'N/A'}</div>
-                                                <div><strong>Profession:</strong> {checkedInData.attendee?.profession ?? 'N/A'}</div>
-                                                <div><strong>Sector of Interest:</strong> {checkedInData.attendee?.sectorOfInterest ?? 'N/A'}</div>
-                                                <div><strong>Attend Workshop:</strong> {checkedInData.attendee?.workshop ?? 'N/A'}</div>
-                                            </>
-                                        )}
+                                        {/* Merge multiple possible fields so we don't show 'N/A' when data exists under alternate keys */}
+                                        {(() => {
+                                            const attendee = checkedInData.attendee || {};
+                                            const sector = attendee.sectorOfInterest || attendee.areaInterest || attendee.other || attendee.sector || 'N/A';
+                                            const profession = attendee.profession || attendee.position || attendee.job || 'N/A';
+                                            const investment = attendee.investmentOpportunity || attendee.investment || attendee.wantInvestment || 'N/A';
+                                            const workshop = attendee.workshop || attendee.attendWorkshop || 'N/A';
+                                            const ticketType = checkedInData.order?.ticket || checkedInData.order?.ticketType || 'N/A';
+                                            const registered = attendee.createdAt ? new Date(attendee.createdAt).toLocaleString() : 'N/A';
+                                            return (
+                                                <>
+                                                    <div><strong>Sector of Interest:</strong> {sector}</div>
+                                                    <div><strong>Profession:</strong> {profession}</div>
+                                                    <div><strong>Want Investment Opportunity:</strong> {investment}</div>
+                                                    <div><strong>Attend Workshop:</strong> {workshop}</div>
+                                                    <div><strong>Ticket Type:</strong> {ticketType}</div>
+                                                    <div><strong>Registered Date:</strong> {registered}</div>
+                                                </>
+                                            );
+                                        })()}
                                     </div>
                                 )}
                             </div>
                         </div>
-                        <div className="fixed inset-0 bg-black opacity-30" onClick={()=> setIsCheckinModalOpen(false)} />
+                        <div className="fixed inset-0 bg-black opacity-30" onClick={()=>{
+                            setIsCheckinModalOpen(false);
+                            try { refetch(); } catch (e) { /* ignore */ }
+                        }} />
                     </div>
                 )}
             </div>

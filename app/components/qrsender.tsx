@@ -21,9 +21,12 @@ export const QRCodeSender: FC<QRCodeSenderProps> = ({ attendee }) => {
     const auth = useAuth();
     const { mutate, isPending } = useMutation({
         mutationFn: async () => {
-            const res = await axiosInstance.post('attendee/createBulkAttendees', {attendees:attendee}, {
-                headers:{
-                    'Authorization': 'Bearer '+auth?.token
+            // pass the current frontend origin to the backend so the generated email / print link
+            // can use the correct base URL instead of defaulting to localhost.
+            const frontendUrl = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : '';
+            const res = await axiosInstance.post('attendee/createBulkAttendees', { attendees: attendee, frontendUrl }, {
+                headers: {
+                    'Authorization': 'Bearer ' + auth?.token
                 }
             });
             return res.data;
