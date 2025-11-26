@@ -29,7 +29,7 @@ export function meta({}:Route.MetaArgs){
 }
 
 export function clientLoader(){
-    
+
 }
 
 export function HydrateFallback(){
@@ -41,20 +41,20 @@ const Index = ()=>{
     const [filter, setFilter] = useState('');
     const debounceSearchTerm = useDebounce(filter, 500);
     const {data, isLoading, isError , refetch} = useQuery({
-        queryKey: ['checkinList', debounceSearchTerm],
+        queryKey: ['confirmedList', debounceSearchTerm],
         queryFn: async ()=>{
-            // Fetch a page of attendees enriched with order/checkin info from the backend endpoint.
-            // The backend returns { items: [...], meta: { total, page, limit, pages } }
-            const res = await axiosInstance.get('/attendee/getCheckInList?page=1&limit=100&query=' + encodeURIComponent(filter), {
+            // Fetch the flat list of confirmed rows from the legacy `confirmed` table.
+            // Response shape is: { message: 'fetched successful', data: [ { fullname, phone, email, registereddate, checkedindate }, ... ] }
+            const res = await axiosInstance.get('/attendee/getConfirmedList', {
                 headers: {
                     'Authorization': 'Bearer ' + auth?.token
                 }
             });
             return res.data;
         },
-        
+
     })
-   
+
     // state to hold check-in result and UI flags
     const [checkedInData, setCheckedInData] = useState<any | null>(null);
     const [isCheckinModalOpen, setIsCheckinModalOpen] = useState(false);
@@ -85,7 +85,8 @@ const Index = ()=>{
                 setCheckedInData(data.data);
                 setShowDetails(false);
                 setIsCheckinModalOpen(true);
-                // We'll refresh the check-in list when the modal is closed so the user can review the details first
+                // Refresh the confirmed list immediately so the table reflects the newly checked-in row
+                try { refetch(); } catch (e) { /* ignore */ }
             }
         },
         onError: (error)=>{
@@ -117,40 +118,58 @@ const Index = ()=>{
                 {
                     isLoading && <Loading/>
                 }
-                {
-                    // Render the check-in list returned by the new API.
-                    // The API returns a payload with .data.items and pagination meta.
-                    data?.data?.items && data.data.items.length > 0 ? (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm table-auto border-collapse">
-                                <thead>
-                                    <tr className="text-left">
-                                        <th className="p-2">ID</th>
-                                        <th className="p-2">Full Name</th>
-                                        <th className="p-2">Email</th>
-                                        <th className="p-2">Phone</th>
-                                        <th className="p-2">Ticket</th>
-                                        <th className="p-2">Checked In</th>
-                                        <th className="p-2">Checked Time</th>
+                {/* Render the check-in list returned by the new API.
+                    The API returns a payload with .data.items and pagination meta.
+                    Always render the table and show a message when there are no items. */}
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm table-auto border-collapse">
+                        <thead>
+                            <tr className="text-left">
+                                <th className = "p-2">ID</th>
+                                <th className="p-2">Full Name</th>
+                                <th className="p-2">Email</th>
+                                <th className="p-2">Phone</th>
+                                <th className="p-2">Registered Date</th>
+                                <th className="p-2">Checked In Date</th>
+                                <th className="p-2">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {(() => {
+                                // operate on the confirmed rows returned by the new endpoint
+                                // expected shape: data.data -> array of confirmed rows
+                                const itemsArr = data?.data ?? [];
+                                if (itemsArr.length === 0) {
+                                    // log the full response to the browser console so the user can inspect the payload
+                                    console.debug('Confirmed response', data);
+                                    return (
+                                        <>
+                                            <tr className="border-t">
+                                                <td className="p-2 align-top" colSpan={6}>No attendees found.</td>
+                                            </tr>
+                                            <tr className="border-t">
+                                                <td className="p-2 align-top" colSpan={6}>
+                                                    {/* JSON dump of the response so it's visible in the UI for debugging */}
+                                                    <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(data, null, 2)}</pre>
+                                                </td>
+                                            </tr>
+                                        </>
+                                    );
+                                }
+                                return itemsArr.map((item:any, idx:number) => (
+                                    <tr key={idx} className="border-t">
+                                        <td className="p-2 align-top">{item.fullname ?? 'N/A'}</td>
+                                        <td className="p-2 align-top">{item.email ?? 'N/A'}</td>
+                                        <td className="p-2 align-top">{item.phone ?? 'N/A'}</td>
+                                        <td className="p-2 align-top">{item.registereddate ? new Date(item.registereddate).toLocaleString() : 'N/A'}</td>
+                                        <td className="p-2 align-top">{item.checkedindate ? new Date(item.checkedindate).toLocaleString() : 'N/A'}</td>
+                                        <td className="p-2 align-top">-</td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    {data.data.items.map((item:any) => (
-                                        <tr key={item.id} className="border-t">
-                                            <td className="p-2 align-top">{item.id}</td>
-                                            <td className="p-2 align-top">{item.fullname}</td>
-                                            <td className="p-2 align-top">{item.email}</td>
-                                            <td className="p-2 align-top">{item.phone ?? 'N/A'}</td>
-                                            <td className="p-2 align-top">{item.order?.ticket ?? 'N/A'}</td>
-                                            <td className="p-2 align-top">{item.checkedIn ? 'Yes' : 'No'}</td>
-                                            <td className="p-2 align-top">{item.checkedTime ? new Date(item.checkedTime).toLocaleString() : 'N/A'}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    ) : null
-                }
+                                ));
+                            })()}
+                        </tbody>
+                    </table>
+                </div>
 
                 {/* Simple modal shown after a successful check-in (from QR scan or manual entry) */}
                 {isCheckinModalOpen && checkedInData && (
