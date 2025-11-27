@@ -15,7 +15,7 @@ import type { IDetectedBarcode } from "@yudiel/react-qr-scanner";
 import { useAuth } from "@/components/authprovider";
 import { AxiosError } from "axios";
 import Loading from "@/components/loading";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useDebounce } from "@/hooks/debounce";
 import { columns } from "@/components/tablecolumns/attendeecolumns";
 import { toast } from "sonner";
@@ -59,6 +59,38 @@ const Index = ()=>{
     const [checkedInData, setCheckedInData] = useState<any | null>(null);
     const [isCheckinModalOpen, setIsCheckinModalOpen] = useState(false);
     const [showDetails, setShowDetails] = useState(false);
+
+    // per-row detail modal state (opened by "Check Details" button)
+    const [detailData, setDetailData] = useState<any | null>(null);
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+    // fetch event submissions to map emails -> entry_id (so checkin table shows the event entry_id when available)
+    const { data: eventSubmissionsRaw } = useQuery({
+        queryKey: ['eventSubmissions'],
+        queryFn: async () => {
+            const res = await axiosInstance.get('/register/submission/event', {
+                headers: {
+                    'Authorization': 'Bearer ' + auth?.token
+                }
+            });
+            // endpoint returns { message, data: [...] } — return data array
+            return res.data?.data ?? [];
+        },
+        staleTime: 1000 * 60 * 5,
+        cacheTime: 1000 * 60 * 10
+    });
+
+    const eventEmailToEntryId = useMemo(() => {
+        const m = new Map<string, string | number>();
+        (eventSubmissionsRaw || []).forEach((s: any) => {
+            const email = (s.email || s.emailAddress || s.emailAddressRaw) ?? null;
+            if (email) {
+                // normalize to lowercase for robust lookup
+                m.set(String(email).toLowerCase(), s.entry_id ?? s.entryId ?? s.id ?? null);
+            }
+        });
+        return m;
+    }, [eventSubmissionsRaw]);
 
     const {mutate, isPending} = useMutation({
         mutationFn: async(orderCode:string)=>{
@@ -145,25 +177,33 @@ const Index = ()=>{
                                     return (
                                         <>
                                             <tr className="border-t">
-                                                <td className="p-2 align-top" colSpan={6}>No attendees found.</td>
-                                            </tr>
-                                            <tr className="border-t">
-                                                <td className="p-2 align-top" colSpan={6}>
-                                                    {/* JSON dump of the response so it's visible in the UI for debugging */}
-                                                    <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(data, null, 2)}</pre>
-                                                </td>
-                                            </tr>
+                                                            <td className="p-2 align-top" colSpan={7}>No attendees found.</td>
+                                                        </tr>
+                                                        <tr className="border-t">
+                                                            <td className="p-2 align-top" colSpan={7}>
+                                                                {/* JSON dump of the response so it's visible in the UI for debugging */}
+                                                                <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(data, null, 2)}</pre>
+                                                            </td>
+                                                        </tr>
                                         </>
                                     );
                                 }
                                 return itemsArr.map((item:any, idx:number) => (
-                                    <tr key={idx} className="border-t">
+                                    <tr key={item.entry_id ?? item.id ?? idx} className="border-t">
+                                        <td className="p-2 align-top">{(() => {
+                                            const mappedByEmail = item.email ? eventEmailToEntryId.get(String(item.email).toLowerCase()) : null;
+                                            const mappedByPhone = item.phone ? eventEmailToEntryId.get(String(item.phone)) : null;
+                                            const mappedId = mappedByEmail ?? mappedByPhone ?? null;
+                                            return mappedId ?? item.entry_id ?? item.id ?? item.order?.id ?? item.attendee?.id ?? 'N/A';
+                                        })()}</td>
                                         <td className="p-2 align-top">{item.fullname ?? 'N/A'}</td>
                                         <td className="p-2 align-top">{item.email ?? 'N/A'}</td>
                                         <td className="p-2 align-top">{item.phone ?? 'N/A'}</td>
                                         <td className="p-2 align-top">{item.registereddate ? new Date(item.registereddate).toLocaleString() : 'N/A'}</td>
                                         <td className="p-2 align-top">{item.checkedindate ? new Date(item.checkedindate).toLocaleString() : 'N/A'}</td>
-                                        <td className="p-2 align-top">-</td>
+                                        <td className="p-2 align-top">
+                                            <Button onClick={() => { setDetailData(item); setIsDetailModalOpen(true); }}>Check Details</Button>
+                                        </td>
                                     </tr>
                                 ));
                             })()}
@@ -232,6 +272,43 @@ const Index = ()=>{
                         <div className="fixed inset-0 bg-black opacity-30" onClick={()=>{
                             setIsCheckinModalOpen(false);
                             try { refetch(); } catch (e) { /* ignore */ }
+                        }} />
+                    </div>
+                )}
+
+                {/* Detail modal for individual row */}
+                {isDetailModalOpen && detailData && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center">
+                        <div className="relative z-50 max-w-md w-full mx-4">
+                            <div className="bg-white rounded-lg shadow-lg p-6">
+                                <div className="flex items-start justify-between">
+                                    <div>
+                                        <h3 className="text-lg font-semibold">Attendee Details</h3>
+                                        <p className="text-sm text-muted-foreground">Details for the selected attendee</p>
+                                    </div>
+                                    <button aria-label="Close" onClick={()=>{
+                                        setIsDetailModalOpen(false);
+                                    }} className="text-gray-500 hover:text-gray-700">✕</button>
+                                </div>
+
+                                <div className="mt-4 space-y-2 text-sm">
+                                    <div><strong>ID:</strong> {detailData.id ?? 'N/A'}</div>
+                                    <div><strong>Name:</strong> {detailData.fullname ?? 'N/A'}</div>
+                                    <div><strong>Email:</strong> {detailData.email ?? 'N/A'}</div>
+                                    <div><strong>Phone:</strong> {detailData.phone ?? 'N/A'}</div>
+                                    <div><strong>Registered:</strong> {detailData.registereddate ? new Date(detailData.registereddate).toLocaleString() : 'N/A'}</div>
+                                    <div><strong>Checked In:</strong> {detailData.checkedindate ? new Date(detailData.checkedindate).toLocaleString() : 'N/A'}</div>
+                                </div>
+
+                                <div className="mt-4 flex gap-2">
+                                    <Button variant="ghost" onClick={()=>{
+                                        setIsDetailModalOpen(false);
+                                    }}>Close</Button>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="fixed inset-0 bg-black opacity-30" onClick={()=>{
+                            setIsDetailModalOpen(false);
                         }} />
                     </div>
                 )}
