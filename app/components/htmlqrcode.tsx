@@ -9,6 +9,8 @@ const qrcodeRegionId = "html5qr-code-full-region";
 type HtmlQRCodeProps = {
     onQRCodeSuccess: (result: IDetectedBarcode[]) => void,
     onQRCodeError: (error: unknown) => void,
+    open?: boolean,
+    onOpenChange?: (open: boolean) => void,
 }
 
 /**
@@ -16,8 +18,9 @@ type HtmlQRCodeProps = {
  * - Debounces / rate-limits scan events to avoid repeated detections firing multiple times.
  * - Prevents repeated toasts by suppressing duplicate scans of the same code for a short window.
  * - Dispatches a custom window event 'attendee:checkedin' with detail { code } after a scan so a parent can optionally listen and refetch.
+ * - Supports controlled dialog state via open and onOpenChange props for auto-closing after scan.
  */
-const HtmlQRCode: FC<HtmlQRCodeProps> = ({ onQRCodeSuccess, onQRCodeError }) => {
+const HtmlQRCode: FC<HtmlQRCodeProps> = ({ onQRCodeSuccess, onQRCodeError, open, onOpenChange }) => {
     // disable scanning briefly after a detection to avoid duplicate processing
     const [scanningDisabled, setScanningDisabled] = useState(false);
     // remember the last scanned code to avoid reprocessing the same code repeatedly
@@ -64,7 +67,7 @@ const HtmlQRCode: FC<HtmlQRCodeProps> = ({ onQRCodeSuccess, onQRCodeError }) => 
     }, [onQRCodeError]);
 
     return (
-        <Dialog>
+        <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogTrigger asChild>
                 <Button variant={'outline'}>
                     <QrCode className='w-5 h-5' />
