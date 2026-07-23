@@ -20,6 +20,78 @@ import {
 } from '../ui/dialog';
 import EditUserForm from '../editUserForm';
 
+// Extracted as a proper React component so hooks work correctly
+function UserActions({ user }: { user: UserResponse }) {
+  const auth = useAuth();
+  const queryClient = useQueryClient();
+
+  const { mutate: deleteUser, isPending } = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await axiosInstance.delete(`/user/delete/${id}`, {
+        headers: {
+          Authorization: `Bearer ${auth?.token}`,
+        },
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      toastSuccess('User deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (error) => {
+      if (error instanceof AxiosError) {
+        toastError(error.response?.data?.message ?? 'Failed to delete user');
+      }
+    },
+  });
+
+  return (
+    <div className='flex gap-2'>
+      {/* Edit Dialog */}
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button variant='outline'>Edit</Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+          </DialogHeader>
+          <EditUserForm user={user} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button variant='destructive' disabled={isPending}>
+            {isPending ? 'Deleting…' : 'Delete'}
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Are you sure you want to delete this user?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. The user <strong>{user.email}</strong> will be permanently removed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant='outline'>Cancel</Button>
+            </DialogClose>
+            <Button
+              variant='destructive'
+              onClick={() => deleteUser(user.id)}
+              disabled={isPending}
+            >
+              {isPending ? 'Deleting…' : 'Yes, Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 export const columns: ColumnDef<UserResponse>[] = [
   {
     accessorKey: 'id',
@@ -32,10 +104,12 @@ export const columns: ColumnDef<UserResponse>[] = [
   {
     accessorKey: 'isLocked',
     header: 'Is Locked',
+    cell: ({ row }) => (row.original.isLocked ? 'Yes' : 'No'),
   },
   {
     accessorKey: 'isNew',
     header: 'Is New',
+    cell: ({ row }) => (row.original.isNew ? 'Yes' : 'No'),
   },
   {
     accessorKey: 'Role',
@@ -48,75 +122,15 @@ export const columns: ColumnDef<UserResponse>[] = [
   {
     accessorKey: 'createdAt',
     header: 'Created At',
+    cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString(),
   },
   {
     accessorKey: 'updatedAt',
     header: 'Updated At',
+    cell: ({ row }) => new Date(row.original.updatedAt).toLocaleDateString(),
   },
   {
     id: 'actions',
-    cell: ({ row }) => {
-      const user = row.original;
-      const auth = useAuth();
-      const queryClient = useQueryClient();
-
-      const { mutate: deleteUser } = useMutation({
-        mutationFn: async (id: string) => {
-          const response = await axiosInstance.delete(`/user/delete/${id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${auth?.token}`,
-            },
-          });
-          return response.data;
-        },
-        onSuccess: () => {
-          toastSuccess('User deleted successfully');
-          queryClient.invalidateQueries({ queryKey: ['users'] });
-        },
-        onError: (error) => {
-          if (error instanceof AxiosError) {
-            toastError(error.response?.data.message);
-          }
-        },
-      });
-
-      return (
-        <div className='flex gap-2'>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant='outline'>Edit</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Edit User</DialogTitle>
-              </DialogHeader>
-              <EditUserForm user={user} />
-            </DialogContent>
-          </Dialog>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant='destructive'>Delete</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Are you sure you want to delete the selected user?</DialogTitle>
-                <DialogDescription>
-                  This action cannot be undone.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant='outline'>No</Button>
-                </DialogClose>
-                <Button variant='destructive' onClick={() => deleteUser(user.id)}>
-                  Yes
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      );
-    },
+    cell: ({ row }) => <UserActions user={row.original} />,
   },
 ];
